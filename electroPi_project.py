@@ -173,6 +173,29 @@ user_completed_courses = pd.DataFrame(result, columns=column_names)
 # st.write(user_completed_courses)
 
 
+# #----------------------------------------
+# Execute a SELECT query
+cursor.execute("SELECT * FROM courses")
+
+# Fetch and print the results
+
+
+# st.header('Package of courses')
+result=cursor.fetchall()
+# Get the column names from the cursor description
+column_names = [desc[0] for desc in cursor.description]
+
+# Create a DataFrame
+courses = pd.DataFrame(result, columns=column_names)
+# st.write(courses)
+
+
+
+
+
+
+
+
 
 #3
 st.header(3)
@@ -193,6 +216,21 @@ if user_id.isdigit():
 
         # Get the last completed course information for the user
         last_completed_course = completion_course_df.iloc[-1]
+        
+        # Group completion data by user and count the number of completed courses
+        completed_courses = completion_course_df.groupby('user_id').size().reset_index(name='Completed Courses')
+
+        # Merge completed courses data with users data
+        users_completed_df = users_10k.merge(completed_courses, on='user_id', how='left')
+
+        # Merge users completed data with the last completed course information
+        users_last_completed = users_completed_df.merge(completion_course_df.groupby('user_id').last().reset_index(), on='user_id')
+
+        # Sort users by 'course_degree' and 'Completed Courses'
+        sorted_users_10k = users_last_completed.sort_values(by=['course_degree', 'Completed Courses'], ascending=[False, False])
+
+        # Display the sorted table
+        st.write(sorted_users_10k)
 
         # Create the interactive graph
         fig = go.Figure(data=[
@@ -232,6 +270,24 @@ if user_id.isdigit():
 else:
     st.write("Invalid input. Please enter a valid User ID.")
 
+
+# Merge completion data with course data
+completion_course_df = user_completed_courses.merge(courses, on='course_id')
+
+# Group completion data by user and count the number of completed courses
+completed_courses = completion_course_df.groupby('user_id').size().reset_index(name='Completed Courses')
+
+# Merge completed courses data with users data
+users_completed_df = users_10k.merge(completed_courses, on='user_id', how='left')
+
+# Merge users completed data with the last completed course information
+users_last_completed = users_completed_df.merge(completion_course_df.groupby('user_id').last().reset_index(), on='user_id')
+
+# Sort users by 'course_degree' and 'Completed Courses'
+sorted_users_10k = users_last_completed.sort_values(by=['course_degree', 'Completed Courses'], ascending=[False, False])
+
+# Display the sorted table
+st.write(sorted_users_10k)
 
 
 
@@ -302,8 +358,42 @@ if user_id:
 
 
 
+# Merge completion data with course data
+completion_course_df = user_completed_courses.merge(courses, on='course_id')
+
+# Calculate the number of currently learning courses and completed courses
+merged_data['currently_learning_courses'] = 1
+merged_data['currently_learning_courses'].fillna(0, inplace=True)
+merged_data['completed_courses'] = merged_data['course_degree'].notna().astype(int)
+
+# Group data by user and sum the number of currently learning and completed courses
+user_summary = merged_data.groupby('user_id').agg(
+    total_learning_courses=('currently_learning_courses', 'sum'),
+    total_completed_courses=('completed_courses', 'sum')
+).reset_index()
+
+# Sort users by currently learning courses and total completed courses
+sorted_users = user_summary.sort_values(by=['total_learning_courses', 'total_completed_courses'], ascending=[False, False])
+
+# Display the sorted table
+st.write(sorted_users)
 
 
+#----------------------------------------
+# Execute a SELECT query
+cursor.execute("SELECT * FROM capstone_evaluation_history")
+
+# Fetch and print the results
+
+
+# st.header('Package of capstone_evaluation_history')
+result=cursor.fetchall()
+# Get the column names from the cursor description
+column_names = [desc[0] for desc in cursor.description]
+
+# Create a DataFrame
+capstone_evaluation_history = pd.DataFrame(result, columns=column_names)
+# st.write(capstone_evaluation_history)
 
 
 
@@ -324,6 +414,42 @@ column_names = [desc[0] for desc in cursor.description]
 # Create a DataFrame
 users_employment_grant = pd.DataFrame(result, columns=column_names)
 # st.write(users_employment_grant)
+#----------------------------------------
+# Execute a SELECT query
+cursor.execute("SELECT * FROM capstones")
+
+# Fetch and print the results
+
+
+# st.header('Package of capstones')
+result=cursor.fetchall()
+# Get the column names from the cursor description
+column_names = [desc[0] for desc in cursor.description]
+
+# Create a DataFrame
+capstones = pd.DataFrame(result, columns=column_names)
+# st.write(capstones)
+
+
+
+#----------------------------------------
+# Execute a SELECT query
+cursor.execute("SELECT * FROM user_lesson_history")
+
+# Fetch and print the results
+
+
+# st.header('Package of user_lesson_history')
+result=cursor.fetchall()
+# Get the column names from the cursor description
+column_names = [desc[0] for desc in cursor.description]
+
+# Create a DataFrame
+user_lesson_history = pd.DataFrame(result, columns=column_names)
+# st.write(user_lesson_history)
+
+
+
 
 #5
 st.header(5)
@@ -387,7 +513,35 @@ else:
         st.write("Invalid input. Please enter a valid User ID (a numeric value).")
 
 
+# Filter user-related data (no specific user ID provided)
+user_info = users.copy()
 
+# Filter bundles, capstones, completed courses, user courses, and lesson history data
+bundles_info = bundles.copy()
+capstone_eval_history_info = capstone_evaluation_history.copy()
+capstones_info = capstones.copy()
+completed_courses_info = user_completed_courses.copy()
+user_courses_info = user_courses.copy()
+lesson_history_info = user_lesson_history.copy()
+
+capstone_eval_history_info['degree'] = capstone_eval_history_info['degree'].astype(str)
+# Convert the "course_id" column to strings before concatenation
+capstones_info['course_id'] = capstones_info['course_id'].astype(str)
+completed_courses_info['course_id'] = completed_courses_info['course_id'].astype(str)
+user_courses_info['course_id'] = user_courses_info['course_id'].astype(str)
+lesson_history_info['lesson_id'] = lesson_history_info['lesson_id'].astype(str)
+
+# Merge all the data into a single DataFrame
+merge_data = user_info.copy()
+merge_data['Bundles'] = bundles_info.groupby('user_id')['bundle_name'].apply(', '.join)
+merge_data['Capstones'] = capstones_info.groupby('user_id')['course_id'].apply(', '.join)
+merge_data['Completed Courses'] = completed_courses_info.groupby('user_id')['course_id'].apply(', '.join)
+merge_data['Degrees'] = capstone_eval_history_info.groupby('user_id')['degree'].apply(', '.join)
+merge_data['Courses'] = user_courses_info.groupby('user_id')['course_id'].apply(', '.join)
+merge_data['Lesson History'] = lesson_history_info.groupby('user_id')['lesson_id'].apply(', '.join)
+
+# Display the merged data
+st.write(merge_data)
 
 
 
@@ -478,7 +632,14 @@ if user_ided.isdigit():
 else:
     st.write("Invalid input. Please enter a valid User ID (a numeric value).")
 
+# Filter the evaluation history data for users with history
+users_with_evaluation_history = capstone_evaluation_history['user_id'].unique()
 
+# Filter user-related data for users with evaluation history
+user_info = users[users['user_id'].isin(users_with_evaluation_history)]
+
+# Display the user information for those with evaluation history
+st.write(user_info)
 
 
 
@@ -527,7 +688,7 @@ else:
     st.write("Invalid input. Please enter a valid Coupon ID.")
 
 
-
+st.write(copons)
 
 
 
@@ -615,21 +776,6 @@ column_names = [desc[0] for desc in cursor.description]
 capstones = pd.DataFrame(result, columns=column_names)
 # st.write(capstones)
 
-# #----------------------------------------
-# Execute a SELECT query
-cursor.execute("SELECT * FROM courses")
-
-# Fetch and print the results
-
-
-# st.header('Package of courses')
-result=cursor.fetchall()
-# Get the column names from the cursor description
-column_names = [desc[0] for desc in cursor.description]
-
-# Create a DataFrame
-courses = pd.DataFrame(result, columns=column_names)
-# st.write(courses)
 
 
 
@@ -651,25 +797,6 @@ courses = pd.DataFrame(result, columns=column_names)
 
 
 
-
-
-
-
-#----------------------------------------
-# Execute a SELECT query
-cursor.execute("SELECT * FROM user_lesson_history")
-
-# Fetch and print the results
-
-
-# st.header('Package of user_lesson_history')
-result=cursor.fetchall()
-# Get the column names from the cursor description
-column_names = [desc[0] for desc in cursor.description]
-
-# Create a DataFrame
-user_lesson_history = pd.DataFrame(result, columns=column_names)
-# st.write(user_lesson_history)
 
 
 
@@ -707,4 +834,3 @@ st.plotly_chart(fig, use_container_width=True)
 
 cursor.close()
 connection.close()
-
