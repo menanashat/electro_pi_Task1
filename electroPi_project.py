@@ -93,11 +93,8 @@ cursor.execute("SELECT * FROM bundles")
 result=cursor.fetchall()
 # Get the column names from the cursor description
 column_names = [desc[0] for desc in cursor.description]
-
 # Create a DataFrame
 bundles = pd.DataFrame(result, columns=column_names)
-# st.write(bundles)
-
 
 # Convert the date columns to datetime format
 bundles['creation_date'] = pd.to_datetime(bundles['creation_date'])
@@ -119,21 +116,21 @@ fig = go.Figure()
 
 # Add traces for daily subscriptions
 for bundle in bundles['bundle_name'].unique():
-    fig.add_trace(go.Scatter(x=daily_subscriptions[daily_subscriptions['bundle_name'] == bundle]['Day'],
-                             y=daily_subscriptions[daily_subscriptions['bundle_name'] == bundle]['Subscribed Users'],
-                             name=f'Daily Subscriptions - {bundle}'))
+    fig.add_trace(go.Bar(x=daily_subscriptions[daily_subscriptions['bundle_name'] == bundle]['Day'],
+                         y=daily_subscriptions[daily_subscriptions['bundle_name'] == bundle]['Subscribed Users'],
+                         name=f'Daily Subscriptions - {bundle}'))
 
 # Add traces for weekly subscriptions
 for bundle in bundles['bundle_name'].unique():
-    fig.add_trace(go.Scatter(x=weekly_subscriptions[weekly_subscriptions['bundle_name'] == bundle]['Week'],
-                             y=weekly_subscriptions[weekly_subscriptions['bundle_name'] == bundle]['Subscribed Users'],
-                             name=f'Weekly Subscriptions - {bundle}'))
+    fig.add_trace(go.Bar(x=weekly_subscriptions[weekly_subscriptions['bundle_name'] == bundle]['Week'],
+                         y=weekly_subscriptions[weekly_subscriptions['bundle_name'] == bundle]['Subscribed Users'],
+                         name=f'Weekly Subscriptions - {bundle}'))
 
 # Add traces for monthly subscriptions
 for bundle in bundles['bundle_name'].unique():
-    fig.add_trace(go.Scatter(x=monthly_subscriptions[monthly_subscriptions['bundle_name'] == bundle]['Month'],
-                             y=monthly_subscriptions[monthly_subscriptions['bundle_name'] == bundle]['Subscribed Users'],
-                             name=f'Monthly Subscriptions - {bundle}'))
+    fig.add_trace(go.Bar(x=monthly_subscriptions[monthly_subscriptions['bundle_name'] == bundle]['Month'],
+                         y=monthly_subscriptions[monthly_subscriptions['bundle_name'] == bundle]['Subscribed Users'],
+                         name=f'Monthly Subscriptions - {bundle}'))
 
 # Add traces for yearly subscriptions
 for bundle in bundles['bundle_name'].unique():
@@ -148,10 +145,6 @@ fig.update_layout(title='Subscribed Users by Bundle',
 
 # Display the graph in Streamlit
 st.plotly_chart(fig, use_container_width=True)
-
-
-
-
 
 
 
@@ -622,7 +615,7 @@ if user_ided.isdigit():
         st.write("User has no capstone or evaluation history.")
     else:
         # Create the interactive graph using Plotly
-        fig = px.scatter(user_data, x='evaluation_date', y='degree', color='course_id', hover_data=['chapter_id', 'lesson_id'])
+        fig = px.bar(user_data, x='evaluation_date', y='degree', color='course_id', hover_data=['chapter_id', 'lesson_id'])
         fig.update_layout(title=f"Capstone and Evaluation History for User {user_ided}",
                           xaxis_title='Evaluation Date',
                           yaxis_title='Degree')
