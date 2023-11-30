@@ -10,6 +10,19 @@ from datetime import datetime, timedelta
 
 # Replace these values with your MySQL server details
 
+
+def plot_users(data, x_col, y_col, mode, name, line_color=None, bar_opacity=None):
+    trace = go.Scatter(
+        x=data[x_col].astype(str),  # Convert the date column to string for plotting
+        y=data[y_col],
+        mode=mode,
+        name=name,
+        line=dict(color=line_color),
+        opacity=bar_opacity
+    )
+    return trace
+
+
 db_config = {
    "host": "localhost",
    "user": "root",
@@ -49,32 +62,102 @@ users['Month'] = users['registration_date'].dt.strftime('%Y-%m')
 users['Year'] = users['registration_date'].dt.year
 
 # Group the data by the desired time period and count the number of registered and subscribed users
-daily_users = users.groupby('Day').size().reset_index(name='Registered Users')
-weekly_users = users.groupby('Week').size().reset_index(name='Registered Users')
-monthly_users = users.groupby('Month').size().reset_index(name='Registered Users')
-yearly_users = users.groupby('Year').size().reset_index(name='Registered Users')
 
-subscribed_users = users[users['subscribed'] == 1].groupby('Day').size().reset_index(name='Subscribed Users')
+daily_users = users.groupby(['Day', 'subscribed']).size().unstack(fill_value=0).reset_index()
+weekly_users = users.groupby(['Week', 'subscribed']).size().unstack(fill_value=0).reset_index()
+monthly_users = users.groupby(['Month', 'subscribed']).size().unstack(fill_value=0).reset_index()
+yearly_users = users.groupby(['Year', 'subscribed']).size().unstack(fill_value=0).reset_index()
+
+# Filter for daily registered users
+daily_registered_users = daily_users[['Day', 0]].rename(columns={0: 'Daily Registered Users'})
+
+# Filter for weekly registered users
+weekly_registered_users = weekly_users[['Week', 0]].rename(columns={0: 'Weekly Registered Users'})
+
+# Filter for monthly registered users
+monthly_registered_users = monthly_users[['Month', 0]].rename(columns={0: 'Monthly Registered Users'})
+
+# Filter for yearly registered users
+yearly_registered_users = yearly_users[['Year', 0]].rename(columns={0: 'Yearly Registered Users'})
+
+# Filter for daily subscribed users
+daily_subscribed_users = daily_users[['Day', 1, 2]].rename(columns={1: 'Daily Subscribed Users', 2: 'Daily Paid Subscribers'})
+
+# Filter for weekly subscribed users
+weekly_subscribed_users = weekly_users[['Week', 1, 2]].rename(columns={1: 'Weekly Subscribed Users', 2: 'Weekly Paid Subscribers'})
+
+# Filter for monthly subscribed users
+monthly_subscribed_users = monthly_users[['Month', 1, 2]].rename(columns={1: 'Monthly Subscribed Users', 2: 'Monthly Paid Subscribers'})
+
+# Filter for yearly subscribed users
+yearly_subscribed_users = yearly_users[['Year', 1, 2]].rename(columns={1: 'Yearly Subscribed Users', 2: 'Yearly Paid Subscribers'})
 
 # Create the figure and add traces
+# fig = go.Figure()
+
+# # Add traces for registered users
+# fig.add_trace(go.Scatter(x=daily_users['Day'], y=daily_users['Registered Users'], name='Daily Registered Users'))
+# fig.add_trace(go.Scatter(x=weekly_users['Week'], y=weekly_users['Registered Users'], name='Weekly Registered Users'))
+# fig.add_trace(go.Scatter(x=monthly_users['Month'], y=monthly_users['Registered Users'], name='Monthly Registered Users'))
+# fig.add_trace(go.Bar(x=yearly_users['Year'], y=yearly_users['Registered Users'], name='Yearly Registered Users'))
+
+# # Add trace for subscribed users
+# fig.add_trace(go.Scatter(x=subscribed_users['Day'], y=subscribed_users['Subscribed Users'], name='Daily Subscribed Users'))
+
+# # Set layout properties
+# fig.update_layout(title='Registered and Subscribed Users',
+#                   xaxis_title='Time Period',
+#                   yaxis_title='Number of Users')
+
+# # Display the graph in Streamlit
+# st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
+# Create a multiselect dropdown for user selection
+selected_metrics = st.multiselect(
+    'Select metrics to visualize',
+    ['Daily registered user', 'Weekly registered user', 'Monthly registered user', 'Yearly registered user',
+     'Daily subscribed user', 'Weekly subscribed user', 'Monthly subscribed user', 'Yearly subscribed user'],
+    default=['Daily registered user', 'Daily subscribed user']
+)
+
+# Define a mapping for the selected metrics
+metric_mapping = {
+    'Daily registered user': (daily_registered_users, 'Day', 'Daily Registered Users', 'lines+markers', 'Daily Registered Users', 'blue', None),
+    'Weekly registered user': (weekly_registered_users, 'Week', 'Weekly Registered Users', 'lines+markers', 'Weekly Registered Users', 'orange', None),
+    'Monthly registered user': (monthly_registered_users, 'Month', 'Monthly Registered Users', 'lines+markers', 'Monthly Registered Users', 'green', None),
+    'Yearly registered user': (yearly_registered_users, 'Year', 'Yearly Registered Users', 'lines', 'Yearly Registered Users', 'red', 0.5),
+    'Daily subscribed user': (daily_subscribed_users, 'Day', 'Daily Subscribed Users', 'lines+markers', 'Daily Subscribed Users', 'purple', None),
+    'Weekly subscribed user': (weekly_subscribed_users, 'Week', 'Weekly Subscribed Users', 'lines+markers', 'Weekly Subscribed Users', 'brown', None),
+    'Monthly subscribed user': (monthly_subscribed_users, 'Month', 'Monthly Subscribed Users', 'lines+markers', 'Monthly Subscribed Users', 'pink', None),
+    'Yearly subscribed user': (yearly_subscribed_users, 'Year', 'Yearly Subscribed Users', 'lines', 'Yearly Subscribed Users', 'gray', 0.5)
+}
+
+# Create the figure and add traces based on user selection
 fig = go.Figure()
 
-# Add traces for registered users
-fig.add_trace(go.Scatter(x=daily_users['Day'], y=daily_users['Registered Users'], name='Daily Registered Users'))
-fig.add_trace(go.Scatter(x=weekly_users['Week'], y=weekly_users['Registered Users'], name='Weekly Registered Users'))
-fig.add_trace(go.Scatter(x=monthly_users['Month'], y=monthly_users['Registered Users'], name='Monthly Registered Users'))
-fig.add_trace(go.Bar(x=yearly_users['Year'], y=yearly_users['Registered Users'], name='Yearly Registered Users'))
-
-# Add trace for subscribed users
-fig.add_trace(go.Scatter(x=subscribed_users['Day'], y=subscribed_users['Subscribed Users'], name='Daily Subscribed Users'))
+for metric in selected_metrics:
+    data, x_col, y_col, mode, name, line_color, bar_opacity = metric_mapping[metric]
+    fig.add_trace(plot_users(data, x_col, y_col, mode, name, line_color, bar_opacity))
 
 # Set layout properties
-fig.update_layout(title='Registered and Subscribed Users',
-                  xaxis_title='Time Period',
-                  yaxis_title='Number of Users')
+fig.update_layout(
+    title='User Metrics Over Time',
+    xaxis_title='Time Period',
+    yaxis_title='Number of Users',
+    legend=dict(x=0, y=1, traceorder='normal', orientation='h'),
+    barmode='overlay'  # Overlay bars for yearly data
+)
 
 # Display the graph in Streamlit
 st.plotly_chart(fig, use_container_width=True)
+
+
+
+
 
 
 
@@ -222,41 +305,10 @@ if user_id.isdigit():
         # Sort users by 'course_degree' and 'Completed Courses'
         sorted_users_10k = users_last_completed.sort_values(by=['course_degree', 'Completed Courses'], ascending=[False, False])
 
-        # Display the sorted table
-        st.write(sorted_users_10k)
+        columns_to_display = ['user_id', 'Completed Courses', 'course_degree', 'completion_date']
+        st.write(sorted_users_10k[columns_to_display])
 
-        # Create the interactive graph
-        fig = go.Figure(data=[
-            go.Bar(x=[user_id],
-                   y=[len(user_completion_data)],
-                   text=[last_completed_course['title']],
-                   marker=dict(color='rgb(158,202,225)'),
-                   hovertemplate=
-                   '<b>User ID: %{x}</b><br>' +
-                   'Completed Courses: %{y}<br>' +
-                   'Last Completed Course: %{text}<br>' +
-                   'Course Degree: %{customdata.course_degree}<br>' +
-                   'Completion Date: %{customdata.completion_date}'
-                   )
-        ])
-
-        # Add custom data (course degree and completion date) to the trace
-        fig.data[0]['customdata'] = [{
-            'course_degree': last_completed_course['course_degree'],
-            'completion_date': last_completed_course['completion_date']
-        }]
-
-        # Set layout properties
-        fig.update_layout(
-            title=f"Last Completed Course for User {user_id}",
-            xaxis_title='User ID',
-            yaxis_title='Completed Courses',
-            hovermode='closest',
-            showlegend=False
-        )
-
-        # Display the graph in Streamlit
-        st.plotly_chart(fig, use_container_width=True)
+       
 
     else:
         st.write(f"User {user_id} is not in the 10k AI Initiative.")
@@ -280,7 +332,38 @@ users_last_completed = users_completed_df.merge(completion_course_df.groupby('us
 sorted_users_10k = users_last_completed.sort_values(by=['course_degree', 'Completed Courses'], ascending=[False, False])
 
 # Display the sorted table
+st.header("this is sorted 10k_AI_initiative")
 st.write(sorted_users_10k)
+
+# Create a scatter plot to show the number of completed courses for each user
+fig_all_users_scatter = go.Figure(data=[
+    go.Scatter(x=sorted_users_10k['user_id'],
+               y=sorted_users_10k['Completed Courses'],
+               mode='markers+text',
+               marker=dict(
+                   symbol='diamond',  # You can try different symbols (e.g., 'circle', 'square', 'diamond')
+                   size=10,
+                   color='rgb(158,202,225)',
+                   line=dict(color='rgb(8,48,107)', width=1)  # Marker border color and width
+               ),
+               text=sorted_users_10k['Completed Courses'],
+               textposition='bottom center',
+               hovertemplate='<b>User ID: %{x}</b><br>' +
+                             'Completed Courses: %{y}<br>'
+               )
+])
+
+# Set layout properties for the all users scatter plot
+fig_all_users_scatter.update_layout(
+    title="Number of Completed Courses for Users in 10k AI Initiative",
+    xaxis_title='User ID',
+    yaxis_title='Completed Courses',
+    hovermode='closest',
+    showlegend=False
+)
+
+# Display the scatter plot in Streamlit
+st.plotly_chart(fig_all_users_scatter, use_container_width=True)
 
 
 
@@ -499,8 +582,11 @@ if number.isdigit():
         merge_data['Courses'] = user_courses_info['course_id'].apply(str).str.cat(sep=', ')
         merge_data['Lesson History'] = lesson_history_info['lesson_id'].apply(str).str.cat(sep=', ')
 
+         # Select only the columns you want to display
+        columns_to_display = ['user_id', 'Bundles', 'Capstones', 'Completed Courses', 'Degrees', 'Courses', 'Lesson History']
+        merge_data = merge_data[columns_to_display]
+
         # Display the merged data
-        # print(merged_data)
         st.write(merge_data)
 else:
         st.write("Invalid input. Please enter a valid User ID (a numeric value).")
@@ -533,8 +619,13 @@ merge_data['Degrees'] = capstone_eval_history_info.groupby('user_id')['degree'].
 merge_data['Courses'] = user_courses_info.groupby('user_id')['course_id'].apply(', '.join)
 merge_data['Lesson History'] = lesson_history_info.groupby('user_id')['lesson_id'].apply(', '.join)
 
-# Display the merged data
+         # Select only the columns you want to display
+columns_to_display = ['user_id', 'Bundles', 'Capstones', 'Completed Courses', 'Degrees', 'Courses', 'Lesson History']
+merge_data = merge_data[columns_to_display]
+
+        # Display the merged data
 st.write(merge_data)
+
 
 
 
@@ -560,38 +651,67 @@ column_names = [desc[0] for desc in cursor.description]
 capstone_evaluation_history = pd.DataFrame(result, columns=column_names)
 # st.write(capstone_evaluation_history)
 
-
 # Convert evaluation_date to a datetime object
 capstone_evaluation_history['evaluation_date'] = pd.to_datetime(capstone_evaluation_history['evaluation_date'])
 
-# Calculate the number of capstones evaluated by each admin for today, this week, and this month
-today = datetime.now()
-this_week = today - pd.DateOffset(7)
-this_month = today.replace(day=1)
-this_year = today.replace(day=1, month=1)
-
-today_count = capstone_evaluation_history[capstone_evaluation_history['evaluation_date'].dt.date == today.date()].groupby('admin_id').size().reset_index(name='count')
-this_week_count = capstone_evaluation_history[capstone_evaluation_history['evaluation_date'] >= this_week].groupby('admin_id').size().reset_index(name='count')
-this_month_count = capstone_evaluation_history[capstone_evaluation_history['evaluation_date'] >= this_month].groupby('admin_id').size().reset_index(name='count')
-this_year_count = capstone_evaluation_history[capstone_evaluation_history['evaluation_date'] >= this_year].groupby('admin_id').size().reset_index(name='count')
-
-# Combine all counts into one DataFrame
-all_counts = pd.concat([today_count, this_week_count, this_month_count, this_year_count])
-all_counts['period'] = ['Today'] * len(today_count) + ['This Week'] * len(this_week_count) + ['This Month'] * len(this_month_count) + ['This Year'] * len(this_year_count)
-
-# Create the interactive Plotly bar chart
-fig = px.bar(all_counts, x='admin_id', y='count', color='period', labels={"count": "Number of Capstones"})
+# Extract day, week, month, and year information
+capstone_evaluation_history['Day'] = capstone_evaluation_history['evaluation_date'].dt.date
+capstone_evaluation_history['Week'] = capstone_evaluation_history['evaluation_date'].dt.strftime('%Y-%U')
+capstone_evaluation_history['Month'] = capstone_evaluation_history['evaluation_date'].dt.strftime('%Y-%m')
+capstone_evaluation_history['Year'] = capstone_evaluation_history['evaluation_date'].dt.year
 
 # Create a Streamlit dashboard
-# st.title("Admin Capstone Evaluation Dashboard")
-# st.header("Number of Capstones Evaluated by Each Admin")
 
-# Display the combined chart
-st.plotly_chart(fig)
+st.header("Number of Capstones Evaluated by Each Admin")
 
+# Create a multiselect dropdown for selecting period
+selected_period = st.multiselect("Select Period:", ["Daily", "Weekly", "Monthly", "Yearly"])
 
+# Calculate the number of capstones evaluated by each admin for the selected period(s)
+counts = {}
 
+if "Daily" in selected_period:
+    daily_count = capstone_evaluation_history.groupby(['admin_id', 'Day']).size().reset_index(name='count_daily')
+    counts['daily'] = daily_count
 
+if "Weekly" in selected_period:
+    weekly_count = capstone_evaluation_history.groupby(['admin_id', 'Week']).size().reset_index(name='count_weekly')
+    counts['weekly'] = weekly_count
+
+if "Monthly" in selected_period:
+    monthly_count = capstone_evaluation_history.groupby(['admin_id', 'Month']).size().reset_index(name='count_monthly')
+    counts['monthly'] = monthly_count
+
+if "Yearly" in selected_period:
+    yearly_count = capstone_evaluation_history.groupby(['admin_id', 'Year']).size().reset_index(name='count_yearly')
+    counts['yearly'] = yearly_count
+
+# Merge counts into one DataFrame
+if counts:
+    all_counts = pd.DataFrame({'admin_id': capstone_evaluation_history['admin_id'].unique()})
+
+    for period, count_df in counts.items():
+        count_df.rename(columns={'count': f'count_{period.lower()}'}, inplace=True)
+        all_counts = pd.merge(all_counts, count_df, on='admin_id', how='left')
+
+    # Fill NaN values with 0 for each period individually
+    for period in counts.keys():
+        all_counts[f'count_{period.lower()}'] = all_counts[f'count_{period.lower()}'].fillna(0)
+
+    # Create the table with daily, weekly, monthly, and yearly counts
+    st.write("Course Completion Summary:")
+    st.table(all_counts[['admin_id'] + [f'count_{period.lower()}' for period in counts.keys()]])
+
+    # Create the bar chart with daily, weekly, monthly, and yearly counts
+    fig = px.bar(all_counts, x='admin_id', y=[f'count_{period.lower()}' for period in counts.keys()],
+                 color_discrete_sequence=px.colors.qualitative.Set1,
+                 labels={"value": "Number of Capstones", "variable": "Period"},
+                 title="Course Completion Summary")
+    
+    # Display the chart
+    st.plotly_chart(fig)
+else:
+    st.warning("Please select at least one period.")
 
 
 
@@ -614,8 +734,12 @@ if user_ided.isdigit():
     if user_data.empty:
         st.write("User has no capstone or evaluation history.")
     else:
+        # Display the table with evaluation history
+        st.write("Evaluation History for User", user_ided)
+        st.table(user_data[['eval_history_id', 'admin_id', 'user_id', 'course_id', 'chapter_id', 'lesson_id', 'degree', 'evaluation_date']])
+        
         # Create the interactive graph using Plotly
-        fig = px.bar(user_data, x='evaluation_date', y='degree', color='course_id', hover_data=['chapter_id', 'lesson_id'])
+        fig = px.scatter(user_data, x='evaluation_date', y='degree', color='course_id', hover_data=['chapter_id', 'lesson_id'])
         fig.update_layout(title=f"Capstone and Evaluation History for User {user_ided}",
                           xaxis_title='Evaluation Date',
                           yaxis_title='Degree')
@@ -632,7 +756,7 @@ users_with_evaluation_history = capstone_evaluation_history['user_id'].unique()
 user_info = users[users['user_id'].isin(users_with_evaluation_history)]
 
 # Display the user information for those with evaluation history
-st.write(user_info)
+st.write(capstone_evaluation_history)
 
 
 
@@ -668,15 +792,18 @@ coupon_id = st.text_input("Enter the Coupon ID:")
 if coupon_id.isdigit():
     coupon_id = int(coupon_id)
 
-    # Filter the coupon data for the specified coupon ID
-    coupon_info = copons[copons['coupon_id'] == coupon_id]
+    # Join the user and copons tables on the appropriate columns
+    merged_data = pd.merge(users, copons, left_on='coupon', right_on='copon_code')
 
-    # Check if the coupon with the specified ID exists
-    if not coupon_info.empty:
-        # Display the details of the coupon
-        st.write(coupon_info)
+    # Filter the merged data for the specified coupon ID
+    coupon_users = merged_data[merged_data['coupon_id'] == coupon_id]
+
+    # Check if there are users with the specified coupon ID
+    if not coupon_users.empty:
+        # Display the details of the users who used the coupon
+        st.write(coupon_users)
     else:
-        st.write(f"No coupon found with ID {coupon_id}")
+        st.write(f"No users found with Coupon ID {coupon_id}")
 else:
     st.write("Invalid input. Please enter a valid Coupon ID.")
 
@@ -802,6 +929,34 @@ capstones = pd.DataFrame(result, columns=column_names)
 #10
 
 st.header(10)
+
+# Prompt the user to enter a user ID
+user_id_input = st.text_input("Enter the User ID :")
+
+# Check if the input is a valid number
+if user_id_input.isdigit():
+    user_id = int(user_id_input)
+
+    # Fetch user information for the specified user ID
+    user_info = users_employment_grant[users_employment_grant['user_id'] == user_id]
+
+    # Check if the user with the specified ID exists
+    if not user_info.empty:
+        # Display the details of the user
+        st.write(user_info)
+    else:
+        st.write(f"No user found with ID {user_id}")
+else:
+    st.write("Invalid input. Please enter a valid User ID.")
+
+
+
+
+
+
+
+
+
 # Merge the two dataframes on 'user_id'
 user_grant_data = users_employment_grant.merge(users_employment_grant_actions, on='user_id', how='left')
 
@@ -823,7 +978,7 @@ fig.update_xaxes(categoryorder='total descending')
 # Display the bar chart
 # st.write("Number of Users in Each Employment Grant Status")
 st.plotly_chart(fig, use_container_width=True)
-
+st.write (users_employment_grant)
 
 cursor.close()
 connection.close()
